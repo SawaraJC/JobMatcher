@@ -1,0 +1,9 @@
+numpy==1.26.4
+torch==2.1.0
+transformers==4.36.2
+sentence-transformers==2.6.1
+pillow==10.2.0
+scikit-learn
+pymupdf
+requests
+beautifulsoup4
