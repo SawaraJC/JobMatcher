@@ -27,3 +27,30 @@ def extract_wd_part(url: str):
         return url.split(".")[1]
     except:
         return None
+    
+
+def parse_oracle_url(url: str):
+    """
+    Extract tenant + site from Oracle URLs reliably
+    """
+
+    try:
+        # tenant = jpmc
+        tenant = url.split("//")[1].split(".")[0]
+
+        # find /sites/<site>/
+        match = re.search(r"/sites/([^/]+)/", url)
+
+        if not match:
+            return None
+
+        site = match.group(1)
+
+        return {
+            "tenant": tenant,
+            "site": site,
+            "base_url": f"https://{tenant}.fa.oraclecloud.com"
+        }
+
+    except Exception:
+        return None

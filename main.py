@@ -3,9 +3,14 @@ from scraper_engine import scrape
 import time
 
 SOURCES = [
-    {"name": "Stripe", "url": "https://boards.greenhouse.io/stripe"},
-    {"name": "Netflix", "url": "https://jobs.lever.co/netflix"},
-    {"name": "TransUnion", "url": "https://transunion.wd5.myworkdayjobs.com/en-GB/TransUnion"}
+    {
+        "name": "TransUnion",
+        "url": "https://transunion.wd5.myworkdayjobs.com/en-GB/TransUnion"
+    },
+    {
+        "name": "JPMC",
+        "url": "https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs"
+    }
 ]
 
 

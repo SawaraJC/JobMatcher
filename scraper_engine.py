@@ -2,6 +2,7 @@ import requests
 
 from parsers.greenhouse import GreenhouseParser
 from parsers.lever import LeverParser
+from parsers.oracle import OracleParser
 from parsers.workday import WorkdayParser
 from parsers.generic import GenericParser
 
@@ -18,6 +19,9 @@ def detect_parser(url):
 
     elif "myworkdayjobs.com" in url:
         return WorkdayParser()
+    
+    elif "oraclecloud.com" in url:
+        return OracleParser()
 
     else:
         return GenericParser()
