@@ -1,12 +1,6 @@
 import re
 
 def parse_workday_url(url: str):
-    """
-    Extract tenant and site from Workday URL
-    Example:
-    https://transunion.wd5.myworkdayjobs.com/en-GB/TransUnion
-    """
-
     pattern = r"https://([^.]+)\.wd\d+\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?([^/]+)"
     match = re.match(pattern, url)
 
@@ -20,27 +14,25 @@ def parse_workday_url(url: str):
 
 
 def extract_wd_part(url: str):
-    """
-    Extract wdX (wd1, wd5, wd10 etc.)
-    """
     try:
         return url.split(".")[1]
     except:
         return None
-    
+
 
 def parse_oracle_url(url: str):
     """
-    Extract tenant + site from Oracle URLs reliably
+    Works for ALL Oracle domains:
+    - jpmc.fa.oraclecloud.com
+    - eofe.fa.us2.oraclecloud.com
+    - etc.
     """
 
     try:
-        # tenant = jpmc
-        tenant = url.split("//")[1].split(".")[0]
+        domain = url.split("//")[1].split("/")[0]
+        tenant = domain.split(".")[0]
 
-        # find /sites/<site>/
         match = re.search(r"/sites/([^/]+)/", url)
-
         if not match:
             return None
 
@@ -49,7 +41,7 @@ def parse_oracle_url(url: str):
         return {
             "tenant": tenant,
             "site": site,
-            "base_url": f"https://{tenant}.fa.oraclecloud.com"
+            "base_url": f"https://{domain}"
         }
 
     except Exception:

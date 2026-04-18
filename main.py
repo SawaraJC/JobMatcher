@@ -10,6 +10,10 @@ SOURCES = [
     {
         "name": "JPMC",
         "url": "https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/jobs"
+    },
+    {
+        "name": "BNY",
+        "url": "https://eofe.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/BNY-Careers/jobs"
     }
 ]
 
@@ -37,7 +41,7 @@ def run():
                     print(f"[{source['name']}] No jobs found\n")
                     continue
 
-                print(f"[{source['name']}] Jobs fetched: {len(jobs)}\n")
+                print(f"[{source['name']}] Jobs fetched: {len(jobs)} | Example: {jobs[0]['title']}\n")
 
                 all_jobs.extend(jobs)
 
@@ -53,9 +57,7 @@ def run():
     print("Sample results:\n")
 
     for idx, job in enumerate(all_jobs[:10], start=1):
-        title = job.get("title", "N/A")
-        company = job.get("company", "N/A")
-        print(f"{idx}. {title} - {company}")
+        print(f"{idx}. {job.get('title', 'N/A')} - {job.get('company', 'N/A')}")
 
 
 if __name__ == "__main__":

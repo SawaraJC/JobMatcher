@@ -1,118 +1,3 @@
-# import requests
-# import time
-# from parsers.util import parse_oracle_url
-
-
-# class OracleParser:
-
-#     def __init__(self, delay=1):
-#         self.delay = delay
-
-#     def build_api_url(self, base_url):
-#         return f"{base_url}/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
-
-#     def fetch_jobs(self, api_url, site):
-#         headers = {
-#             "User-Agent": "Mozilla/5.0",
-#             "Accept": "application/json"
-#         }
-
-#         limit = 25
-#         offset = 0
-
-#         all_jobs = []
-#         seen_ids = set()
-
-#         print("\nFetching Oracle (JPMC) jobs...\n")
-
-#         page = 1
-
-#         while True:
-#             print(f"Page {page} | Offset: {offset}")
-
-#             params = {
-#                 "onlyData": "true",
-#                 "expand": "requisitionList.workLocation,requisitionList.secondaryLocations",
-#                 "finder": (
-#                     f"findReqs;"
-#                     f"siteNumber={site},"
-#                     f"facetsList=LOCATIONS;WORK_LOCATIONS;WORKPLACE_TYPES;TITLES;CATEGORIES;ORGANIZATIONS;POSTING_DATES;FLEX_FIELDS,"
-#                     f"limit={limit},"
-#                     f"offset={offset},"
-#                     f"sortBy=POSTING_DATES_DESC"
-#                 )
-#             }
-
-#             response = requests.get(api_url, headers=headers, params=params, timeout=10)
-
-#             if response.status_code != 200:
-#                 print(f"Request failed: {response.status_code}")
-#                 break
-
-#             data = response.json()
-
-#             items = data.get("items", [])
-#             if not items:
-#                 print("No items returned — stopping")
-#                 break
-
-#             new_jobs = 0
-
-#             for item in items:
-#                 requisitions = item.get("requisitionList", [])
-
-#                 for job in requisitions:
-#                     job_id = job.get("Id")
-
-#                     if not job_id or job_id in seen_ids:
-#                         continue
-
-#                     seen_ids.add(job_id)
-
-#                     all_jobs.append({
-#                         "title": job.get("Title"),
-#                         "location": job.get("PrimaryLocation"),
-#                         "job_id": job_id,
-#                         "company": "jpmc",
-#                         "description": job.get("ShortDescriptionStr"),
-#                         "url": f"https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/{site}/job/{job_id}"
-#                     })
-
-#                     new_jobs += 1
-
-#             print(f"Page {page} complete | New jobs: {new_jobs} | Total: {len(all_jobs)}\n")
-
-#             # Stop conditions
-#             if new_jobs == 0:
-#                 print("No new jobs — stopping")
-#                 break
-
-#             if not data.get("hasMore"):
-#                 print("Reached last page")
-#                 break
-
-#             offset += limit
-#             page += 1
-#             time.sleep(self.delay)
-
-#         print(f"\nFinal JPMC Jobs Collected: {len(all_jobs)}\n")
-
-#         return all_jobs
-
-#     def parse(self, url):
-#         config = parse_oracle_url(url)
-
-#         if not config:
-#             print("Invalid Oracle URL")
-#             return []
-
-#         api_url = self.build_api_url(config["base_url"])
-#         site = config["site"]
-
-#         print(f"🔗 Fetching from API:\n{api_url}\n")
-
-#         return self.fetch_jobs(api_url, site)
-
 import requests
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -149,17 +34,17 @@ class OracleParser:
 
         return response.json()
 
-    def fetch_jobs(self, api_url, site):
+    def fetch_jobs(self, api_url, site, config):
         headers = {
             "User-Agent": "Mozilla/5.0",
             "Accept": "application/json"
         }
 
-        limit = 50   # increased for performance
+        limit = 50
 
-        print("\nFetching Oracle (JPMC) jobs...\n")
+        print(f"\nFetching Oracle jobs for {config['tenant']}...\n")
 
-        # Step 1: Initial request to get total count
+        # Step 1: Initial request
         initial_data = self._make_request(api_url, site, 0, limit, headers)
         items = initial_data.get("items", [])
 
@@ -168,10 +53,8 @@ class OracleParser:
             return []
 
         total_jobs = items[0].get("TotalJobsCount", 0)
-
         print(f"Total jobs reported: {total_jobs}")
 
-        # Step 2: Prepare offsets
         offsets = list(range(0, total_jobs, limit))
 
         all_jobs = []
@@ -179,6 +62,8 @@ class OracleParser:
 
         def process_offset(offset):
             try:
+                time.sleep(self.delay)
+
                 data = self._make_request(api_url, site, offset, limit, headers)
                 batch = []
 
@@ -188,17 +73,22 @@ class OracleParser:
 
                     for job in requisitions:
                         job_id = job.get("Id")
-
                         if not job_id:
                             continue
 
+                        location = (
+                            job.get("PrimaryLocation")
+                            or job.get("PrimaryLocationCountry")
+                            or "Unknown"
+                        )
+
                         batch.append({
                             "title": job.get("Title"),
-                            "location": job.get("PrimaryLocation"),
+                            "location": location,
                             "job_id": job_id,
-                            "company": "jpmc",
+                            "company": config["tenant"],
                             "description": job.get("ShortDescriptionStr"),
-                            "url": f"https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/{site}/job/{job_id}"
+                            "url": f"{config['base_url']}/hcmUI/CandidateExperience/en/sites/{site}/job/{job_id}"
                         })
 
                 return batch
@@ -207,7 +97,7 @@ class OracleParser:
                 print(f"Error at offset {offset}: {e}")
                 return []
 
-        # Step 3: Parallel execution
+        # Step 2: Parallel execution
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = {executor.submit(process_offset, offset): offset for offset in offsets}
 
@@ -216,7 +106,6 @@ class OracleParser:
 
                 try:
                     batch = future.result()
-
                     new_count = 0
 
                     for job in batch:
@@ -234,7 +123,7 @@ class OracleParser:
                 except Exception as e:
                     print(f"Error processing offset {offset}: {e}")
 
-        print(f"\nFinal JPMC Jobs Collected: {len(all_jobs)}\n")
+        print(f"\nFinal Jobs Collected ({config['tenant']}): {len(all_jobs)}\n")
 
         return all_jobs
 
@@ -250,4 +139,4 @@ class OracleParser:
 
         print(f"Fetching from API:\n{api_url}\n")
 
-        return self.fetch_jobs(api_url, site)
+        return self.fetch_jobs(api_url, site, config)
